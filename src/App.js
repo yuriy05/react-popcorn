@@ -11,6 +11,8 @@ export default function App() {
   const [watched, setWatched] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const avgImdbRating = average(
     watched.map((movie) => movie.imdbRating),
@@ -34,6 +36,8 @@ export default function App() {
         /*
         //*Fetching movies from API
         */
+        setIsLoading(true);
+
         const res = await fetch(
           `http://www.omdbapi.com/?apikey=${KEY}&s=Matrix`,
         );
@@ -47,6 +51,8 @@ export default function App() {
           throw new Error('⛔ Movie was not found');
 
         setMovies(data.Search);
+
+        setIsLoading(false);
         setError('');
       };
 
@@ -65,9 +71,8 @@ export default function App() {
       </NavBar>
       <Main>
         <Box>
-          {error ? (
-            <p>{error}</p>
-          ) : (
+          {isLoading && <Loader />}
+          {!isLoading && !error && (
             <MovieList
               movies={movies}
               onSelectMovie={handleSelectMovie}
@@ -82,10 +87,12 @@ export default function App() {
             avgRuntime={avgRuntime}
           />
           <WatchedMovies watched={watched} />
+          {isLoadingDetails && <Loader />}
           {selectedId && (
             <MovieDetails
               selectedId={selectedId}
               onCloseMovie={handleCloseMovie}
+              onLoadingDetails={setIsLoadingDetails}
             />
           )}
         </Box>
@@ -168,11 +175,17 @@ function MovieList({ movies, onSelectMovie }) {
   );
 }
 
-function MovieDetails({ selectedId, onCloseMovie }) {
+function MovieDetails({
+  selectedId,
+  onCloseMovie,
+  onLoadingDetails,
+}) {
   const [movie, setMovie] = useState({});
 
   useEffect(() => {
     const fetchMovie = async () => {
+      onLoadingDetails(true);
+
       const res = await fetch(
         `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`,
       );
@@ -180,9 +193,20 @@ function MovieDetails({ selectedId, onCloseMovie }) {
       const data = await res.json();
 
       setMovie(data);
+      onLoadingDetails(false);
     };
     fetchMovie();
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!movie.Title) return;
+
+    document.title = `| ${movie.Title}`;
+
+    return () => {
+      document.title = 'React App';
+    };
+  }, [movie.Title]);
 
   return (
     <div className="details">
@@ -273,5 +297,13 @@ function WatchedMovies({ watched }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function Loader() {
+  return (
+    <div>
+      <div className="skeleton-body"></div>
+    </div>
   );
 }
