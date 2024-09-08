@@ -13,6 +13,7 @@ StarRating.propTypes = {
   color: PropTypes.string,
   class: PropTypes.string,
   defaultRating: PropTypes.number,
+  onSetRating: PropTypes.func,
 };
 
 function StarRating({
@@ -21,6 +22,7 @@ function StarRating({
   color = '#fcc419',
   className = '',
   defaultRating = 0,
+  onSetRating,
 }) {
   const [rating, setRating] = useState(defaultRating);
   const [tempRating, setTempRating] = useState(0);
@@ -30,6 +32,7 @@ function StarRating({
 
   const handleRating = (rating) => {
     setRating(rating);
+    onSetRating(rating);
   };
 
   const starRatingFont = {
