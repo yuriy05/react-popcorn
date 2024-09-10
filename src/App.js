@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import StarRating from './StarRating';
+import { useMovies } from './useMovies';
+import { useLocaleStorage } from './useLocalStorage';
 
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -8,14 +10,11 @@ const KEY = '324339c';
 
 export default function App() {
   const [query, setQuery] = useState('Matrix');
-  const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState(() => {
-    const watchedList = localStorage.getItem('watched');
-    return JSON.parse(watchedList);
-  });
+
+  const [watched, setWatched] = useLocaleStorage([], 'watched');
+  const { movies, error, isLoading } = useMovies(query);
+
   const [selectedId, setSelectedId] = useState(null);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const handleSelectMovie = (id) => {
@@ -30,59 +29,13 @@ export default function App() {
     setWatched((watched) => [...watched, movie]);
   };
 
-  const handleRemoveWatchedMovie = (id) => {
+  const handleRemoveWatchedMovie = (e, id) => {
+    e.stopPropagation();
+
     setWatched((watched) =>
       watched.filter((movie) => movie.imdbID !== id),
     );
   };
-
-  useEffect(() => {
-    localStorage.setItem('watched', JSON.stringify(watched));
-  }, [watched]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const fetchMovies = async () => {
-      try {
-        /*
-        //*Fetching movies from API
-        */
-        setIsLoading(true);
-        setError('');
-
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
-          { signal: controller.signal },
-        );
-
-        const data = await res.json();
-        console.log(data, 'DATA');
-
-        if (!res.ok) throw new Error('Something went wrong...');
-
-        if (data.Response === 'False')
-          throw new Error('Movie was not found');
-
-        setMovies(data.Search);
-
-        setError('');
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    handleCloseMovie();
-    fetchMovies();
-
-    return function () {
-      controller.abort();
-    };
-  }, [query]);
 
   return (
     <>
@@ -321,7 +274,7 @@ function MovieDetails({
                 </p>
                 <button
                   className="btn-add"
-                  onClick={() => onRemoveWacthedMovie(movie.imdbID)}
+                  onClick={(e) => onRemoveWacthedMovie(e, movie.imdbID)}
                 >
                   Remove movie from wacthed list
                 </button>
@@ -395,7 +348,7 @@ function WatchedMovies({ watched, onRemoveWacthedMovie, onSelectMovie }) {
           </div>
           <button
             className="btn-delete"
-            onClick={() => onRemoveWacthedMovie(movie.imdbID)}
+            onClick={(e) => onRemoveWacthedMovie(e, movie.imdbID)}
           >
             X
           </button>
